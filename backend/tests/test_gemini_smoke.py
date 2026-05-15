@@ -30,14 +30,16 @@ async def main() -> None:
 
     from agents.llm import gemini_json
 
-    print(f"→ Project: {settings.gcp_project_id}")
-    print(f"→ Location: {settings.gcp_location}")
-    print(f"→ Credentials: {os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}")
-    print(f"→ Model: {settings.model_judge}")
+    print(f"-> Project: {settings.gcp_project_id}")
+    print(f"-> Location: {settings.gcp_location}")
+    print(f"-> Credentials: {os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}")
+    # Use flash for the smoke test — pro's thinking budget can eat small output caps.
+    model = settings.model_prospector
+    print(f"-> Model: {model}")
     print()
 
     result = await gemini_json(
-        model=settings.model_judge,
+        model=model,
         system_instruction=(
             "You are a JSON-only test assistant. Reply with the exact shape "
             "requested. Do not add any prose."
@@ -47,12 +49,12 @@ async def main() -> None:
             '{"greeting": "<a one-word greeting in Bahasa Indonesia>", '
             '"ready_to_build": <true or false>}'
         ),
-        max_output_tokens=80,
+        max_output_tokens=200,
         temperature=0.0,
     )
-    print(f"✓ Latency: {result.latency_ms} ms")
-    print(f"✓ Tokens: {result.prompt_tokens} in / {result.completion_tokens} out")
-    print(f"✓ Parsed JSON: {result.data}")
+    print(f"OK Latency: {result.latency_ms} ms")
+    print(f"OK Tokens: {result.prompt_tokens} in / {result.completion_tokens} out")
+    print(f"OK Parsed JSON: {result.data}")
 
 
 if __name__ == "__main__":

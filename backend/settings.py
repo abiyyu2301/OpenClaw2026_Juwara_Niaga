@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         env_file=str(REPO_ROOT / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
+        protected_namespaces=(),  # allow "model_*" field names without warnings
     )
 
     # --- GCP ---
