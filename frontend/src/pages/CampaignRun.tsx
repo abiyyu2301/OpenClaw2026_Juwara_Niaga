@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AgentFeed } from "../components/AgentFeed";
 import { DebatePanel } from "../components/DebatePanel";
+import { EmailHistory } from "../components/EmailHistory";
 import { LeadKanban } from "../components/LeadKanban";
 import { api, type Campaign, type Lead, type Run } from "../lib/api";
 import { connectRun, type FeedEvent } from "../lib/ws";
@@ -17,7 +18,12 @@ export default function CampaignRun() {
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [debate, setDebate] = useState<any>(null);
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [replies, setReplies] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [wsOpen, setWsOpen] = useState(false);
+  const [findingLeads, setFindingLeads] = useState(false);
+  const [findError, setFindError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Load campaign + leads on mount
@@ -40,9 +46,12 @@ export default function CampaignRun() {
   // Refresh active lead detail when selected lead changes or events arrive
   useEffect(() => {
     if (!activeLead) return;
-    api.getLead(activeLead.id).then((r) => {
+    api.getLead(activeLead.id).then((r: any) => {
       setProfile(r.profile);
       setDebate(r.debate);
+      setDrafts(r.drafts || []);
+      setReplies(r.replies || []);
+      setPayments(r.payments || []);
     });
   }, [activeLead?.id, events.length]);
 
@@ -96,6 +105,30 @@ export default function CampaignRun() {
     wsRef.current?.close();
   }
 
+  async function handleFindLeads() {
+    setFindingLeads(true);
+    setFindError(null);
+    try {
+      await api.findLeads(campaignId, 3);
+      await refreshLeads();
+    } catch (e: any) {
+      setFindError(String(e?.message || e));
+    } finally {
+      setFindingLeads(false);
+    }
+  }
+
+  async function handleSimulatePay(ref: string, status: "paid" | "failed" | "expired") {
+    await api.simulatePay(ref, status);
+    if (activeLead) {
+      const r = await api.getLead(activeLead.id) as any;
+      setPayments(r.payments || []);
+      setProfile(r.profile);
+    }
+    await refreshLeads();
+    if (run) setRun(await api.getRun(run.id));
+  }
+
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-4">
       {/* Top bar */}
@@ -125,7 +158,15 @@ export default function CampaignRun() {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={handleFindLeads}
+            disabled={findingLeads}
+            className="bg-sandstone-100 border border-sandstone-300 hover:bg-sandstone-200 text-sandstone-900 font-medium rounded px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Use Gemini with Google Search to discover 3 new Indonesian leads matching this ICP"
+          >
+            {findingLeads ? "Searching the web…" : "🔎 Find new leads"}
+          </button>
           {(!run || run.status === "completed") && (
             <button
               onClick={handleStart}
@@ -161,6 +202,12 @@ export default function CampaignRun() {
         </div>
       </div>
 
+      {findError && (
+        <div className="mb-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2">
+          Find leads failed: {findError}
+        </div>
+      )}
+
       {/* KPI tiles */}
       <div className="grid grid-cols-5 gap-2 mb-3">
         <Tile label="Processed" value={run?.leads_processed ?? 0} />
@@ -188,11 +235,26 @@ export default function CampaignRun() {
           </h2>
           <AgentFeed events={events} />
         </div>
-        <div className="col-span-3">
-          <h2 className="text-xs uppercase tracking-wider text-sandstone-500 mb-1">
-            Active lead
-          </h2>
-          <DebatePanel lead={activeLead} profile={profile} debate={debate} />
+        <div className="col-span-3 space-y-3">
+          <div>
+            <h2 className="text-xs uppercase tracking-wider text-sandstone-500 mb-1">
+              Active lead
+            </h2>
+            <DebatePanel lead={activeLead} profile={profile} debate={debate} />
+          </div>
+          {activeLead && (
+            <div>
+              <h2 className="text-xs uppercase tracking-wider text-sandstone-500 mb-1">
+                Emails & payments
+              </h2>
+              <EmailHistory
+                drafts={drafts}
+                replies={replies}
+                payments={payments}
+                onSimulatePay={handleSimulatePay}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

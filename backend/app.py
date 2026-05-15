@@ -4,6 +4,28 @@ Boots the API server, mounts WebSocket for the live agent feed, and exposes
 campaign / lead / run / webhook routes.
 """
 
+import os
+from pathlib import Path
+
+# CRITICAL: set GOOGLE_APPLICATION_CREDENTIALS before any google-auth import
+# happens (settings, agents, anything). uvicorn launches with whatever the
+# parent shell had set, which is typically nothing — so the auth library
+# falls back to stale `gcloud auth` user creds and fails with invalid_grant.
+def _seed_gcp_credentials() -> None:
+    cur = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if cur and Path(cur).is_file():
+        return
+    here = Path(__file__).resolve().parent.parent
+    for candidate in [
+        here / "credentials" / "niaga-backend-key.json",
+    ]:
+        if candidate.is_file():
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(candidate)
+            return
+
+
+_seed_gcp_credentials()
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware

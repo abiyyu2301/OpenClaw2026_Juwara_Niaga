@@ -40,6 +40,9 @@ class BaseAgent:
     # Gemini 2.5 thinking budget. 0 = disabled (fast/cheap, no reasoning).
     # Higher = more reasoning before emitting the final JSON.
     default_thinking_budget: Optional[int] = 0
+    # Enable Google Search grounding. Disables strict JSON mode — agent
+    # must parse JSON from response text.
+    default_enable_google_search: bool = False
 
     def __init__(
         self,
@@ -99,6 +102,7 @@ class BaseAgent:
                 if thinking_budget is not None
                 else self.default_thinking_budget
             ),
+            enable_google_search=self.default_enable_google_search,
         )
 
     def _log(

@@ -109,4 +109,8 @@ export const api = {
   // Mock pay simulation
   simulatePay: (referenceId: string, status: "paid" | "failed" | "expired") =>
     req<{ ok: boolean }>(`/webhooks/mock-pay/${referenceId}?status=${status}`, { method: "POST" }),
+
+  // LeadFinder — discover new leads via grounded Gemini
+  findLeads: (campaignId: number, n = 3) =>
+    req<Lead[]>(`/campaigns/${campaignId}/find-leads?n=${n}`, { method: "POST" }),
 };

@@ -10,17 +10,39 @@ One shared async client. All agents call `gemini_json()` which:
 from __future__ import annotations
 
 import json
+import os
 import time
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from google import genai
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from settings import settings
+from settings import REPO_ROOT, settings
 
 
 _client: Optional[genai.Client] = None
+
+
+def _ensure_credentials() -> None:
+    """Make sure GOOGLE_APPLICATION_CREDENTIALS points to our service-account
+    JSON before the google-auth library tries to resolve credentials.
+
+    The auth library checks this env var first; without it, it falls back to
+    the user's `gcloud auth` cached credentials, which can be stale and
+    cause `invalid_grant`."""
+    current = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if current and Path(current).is_file():
+        return
+    configured = settings.google_application_credentials
+    if not configured:
+        return
+    candidate = Path(configured)
+    if not candidate.is_absolute():
+        candidate = (REPO_ROOT / configured).resolve()
+    if candidate.is_file():
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(candidate)
 
 
 def get_client() -> genai.Client:
@@ -28,6 +50,7 @@ def get_client() -> genai.Client:
     GOOGLE_APPLICATION_CREDENTIALS env var (service account JSON path)."""
     global _client
     if _client is None:
+        _ensure_credentials()
         _client = genai.Client(
             vertexai=True,
             project=settings.gcp_project_id,
@@ -71,6 +94,7 @@ async def gemini_json(
     max_output_tokens: int = 1500,
     temperature: float = 0.4,
     thinking_budget: Optional[int] = 0,
+    enable_google_search: bool = False,
 ) -> LLMResult:
     """Call Gemini with native JSON mode and return parsed dict.
 
@@ -92,10 +116,15 @@ async def gemini_json(
         system_instruction=system_instruction,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
-        response_mime_type="application/json",
     )
-    if response_schema:
-        config_kwargs["response_schema"] = response_schema
+    # Google Search grounding is incompatible with JSON-mode response constraints.
+    # When search is enabled, we ask for JSON in the prompt and parse from text.
+    if enable_google_search:
+        config_kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
+    else:
+        config_kwargs["response_mime_type"] = "application/json"
+        if response_schema:
+            config_kwargs["response_schema"] = response_schema
     if thinking_budget is not None:
         config_kwargs["thinking_config"] = types.ThinkingConfig(
             thinking_budget=thinking_budget
