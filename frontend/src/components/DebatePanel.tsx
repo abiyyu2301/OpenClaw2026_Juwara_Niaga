@@ -1,4 +1,5 @@
 import type { Lead } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 interface DebatePanelProps {
   lead?: Lead | null;
@@ -16,16 +17,22 @@ function parseJson(s?: string): any {
 }
 
 export function DebatePanel({ lead, profile, debate }: DebatePanelProps) {
+  const { t, locale } = useI18n();
+
   if (!lead) {
     return (
       <div className="rounded-lg border border-sandstone-200 bg-white p-4 text-sm text-sandstone-500">
-        Select a lead from the kanban to see its profile, debate, and verdict.
+        {t("debate_pick_lead")}
       </div>
     );
   }
 
   const bull = parseJson(debate?.bull_argument_json);
   const bear = parseJson(debate?.bear_argument_json);
+  const money = (n: number) =>
+    locale === "en"
+      ? `IDR ${Number(n || 0).toLocaleString("en-US")}`
+      : `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 
   return (
     <div className="space-y-3">
@@ -39,13 +46,13 @@ export function DebatePanel({ lead, profile, debate }: DebatePanelProps) {
         {profile && (
           <div className="mt-3 text-sm">
             <p className="text-sandstone-700">
-              <strong>Why relevant:</strong> {profile.why_relevant}
+              <strong>{t("debate_why")}</strong> {profile.why_relevant}
             </p>
             <p className="text-sandstone-700 mt-1">
-              <strong>Trigger:</strong> {profile.detected_trigger}
+              <strong>{t("debate_trigger")}</strong> {profile.detected_trigger}
             </p>
             <p className="text-sandstone-700 mt-1">
-              <strong>Fit score:</strong> {profile.fit_score}/100 ({profile.confidence_level})
+              <strong>{t("debate_fit")}</strong> {profile.fit_score}/100 ({profile.confidence_level})
             </p>
           </div>
         )}
@@ -53,7 +60,7 @@ export function DebatePanel({ lead, profile, debate }: DebatePanelProps) {
 
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg border-l-4 border-l-agent-bull bg-white p-3">
-          <div className="text-xs uppercase font-bold text-agent-bull mb-1">Bull (pursue)</div>
+          <div className="text-xs uppercase font-bold text-agent-bull mb-1">{t("debate_bull")}</div>
           {bull ? (
             <>
               <ul className="text-xs text-sandstone-800 space-y-1 list-disc list-inside">
@@ -62,16 +69,16 @@ export function DebatePanel({ lead, profile, debate }: DebatePanelProps) {
                 ))}
               </ul>
               <div className="text-[11px] text-sandstone-500 mt-2">
-                Rp {Number(bull.estimated_deal_value_idr || 0).toLocaleString()} ·
-                close prob {Math.round((bull.estimated_close_probability || 0) * 100)}%
+                {money(bull.estimated_deal_value_idr)} · close prob{" "}
+                {Math.round((bull.estimated_close_probability || 0) * 100)}%
               </div>
             </>
           ) : (
-            <div className="text-xs text-sandstone-400">No debate yet.</div>
+            <div className="text-xs text-sandstone-400">{t("debate_no_debate")}</div>
           )}
         </div>
         <div className="rounded-lg border-l-4 border-l-agent-bear bg-white p-3">
-          <div className="text-xs uppercase font-bold text-agent-bear mb-1">Bear (skip)</div>
+          <div className="text-xs uppercase font-bold text-agent-bear mb-1">{t("debate_bear")}</div>
           {bear ? (
             <>
               <ul className="text-xs text-sandstone-800 space-y-1 list-disc list-inside">
@@ -85,7 +92,7 @@ export function DebatePanel({ lead, profile, debate }: DebatePanelProps) {
               </div>
             </>
           ) : (
-            <div className="text-xs text-sandstone-400">No debate yet.</div>
+            <div className="text-xs text-sandstone-400">{t("debate_no_debate")}</div>
           )}
         </div>
       </div>
@@ -93,7 +100,7 @@ export function DebatePanel({ lead, profile, debate }: DebatePanelProps) {
       {debate && (
         <div className="rounded-lg border border-l-4 border-l-agent-judge bg-white p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase font-bold text-agent-judge">Judge verdict</span>
+            <span className="text-xs uppercase font-bold text-agent-judge">{t("debate_judge")}</span>
             <span
               className={`text-xs font-bold px-2 py-0.5 rounded ${
                 debate.verdict === "qualified"
@@ -107,7 +114,7 @@ export function DebatePanel({ lead, profile, debate }: DebatePanelProps) {
           <p className="text-sm text-sandstone-800 mt-2">{debate.reasoning}</p>
           {debate.recommended_angle && (
             <p className="text-xs text-sandstone-600 mt-2 italic">
-              Angle: {debate.recommended_angle}
+              {t("angle")}: {debate.recommended_angle}
             </p>
           )}
         </div>

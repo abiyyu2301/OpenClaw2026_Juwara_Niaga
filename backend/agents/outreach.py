@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from agents.base import BaseAgent
 from agents.llm import LLMResult
@@ -25,7 +25,13 @@ class OutreachAgent(BaseAgent):
         profile: Dict[str, Any],
         angle: str,
         offer: Dict[str, Any],
+        outreach_ctx: Optional[Dict[str, Any]] = None,
     ) -> LLMResult:
-        await self.think("Drafting Bahasa Indonesia email…")
-        context = {"profile_json": profile, "angle": angle, "offer_json": offer}
+        await self.think("Menyusun email Bahasa Indonesia…")
+        context = {
+            "profile_json": profile,
+            "angle": angle,
+            "offer_json": offer,
+            "outreach_context_json": outreach_ctx or {},
+        }
         return await self.run_llm(context)

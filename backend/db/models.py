@@ -34,10 +34,43 @@ class Campaign(Base):
     disqualifiers = Column(Text)
     autonomous_mode = Column(Boolean, default=True)
     max_leads_per_run = Column(Integer, default=10)
+    # Sales goal (IDR revenue target for recommendation engine)
+    sales_target_revenue = Column(Integer)
+    # Geography (Maps place + radius, or legacy free-text in geography)
+    geo_place_name = Column(String(300))
+    geo_lat = Column(Float)
+    geo_lng = Column(Float)
+    geo_radius_km = Column(Integer)
+    # Sales rep identity for email sign-off
+    rep_name = Column(String(200))
+    rep_email = Column(String(300))
+    rep_phone = Column(String(50))
+    rep_title = Column(String(200))
+    # Tone / style mimic (prompt injection)
+    sales_voice = Column(Text)
+    sales_voice_samples = Column(Text)
+    # Primary promo asset (also see campaign_assets for uploads)
+    promo_asset_url = Column(String(1000))
+    promo_asset_type = Column(String(20))  # poster | video
     created_at = Column(DateTime, default=_now)
 
     leads = relationship("Lead", back_populates="campaign", cascade="all, delete-orphan")
     runs = relationship("AgentRun", back_populates="campaign", cascade="all, delete-orphan")
+    assets = relationship("CampaignAsset", back_populates="campaign", cascade="all, delete-orphan")
+
+
+class CampaignAsset(Base):
+    __tablename__ = "campaign_assets"
+
+    id = Column(Integer, primary_key=True)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
+    file_name = Column(String(300))
+    mime_type = Column(String(100))
+    asset_type = Column(String(20))  # poster | video
+    storage_url = Column(String(1000), nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+    campaign = relationship("Campaign", back_populates="assets")
 
 
 class Lead(Base):

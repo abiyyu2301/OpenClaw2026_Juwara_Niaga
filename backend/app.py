@@ -46,6 +46,10 @@ from db import models  # noqa: F401
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from db.migrate import ensure_campaign_assets_table, migrate
+
+    migrate(engine)
+    ensure_campaign_assets_table(engine)
     yield
 
 

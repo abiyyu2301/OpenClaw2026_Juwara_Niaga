@@ -47,24 +47,37 @@ async def send_email(
     subject: str,
     body: str,
     in_reply_to: Optional[str] = None,
+    from_display_name: Optional[str] = None,
+    reply_to: Optional[str] = None,
 ) -> str:
     """Send an email via Gmail SMTP. Returns the SMTP Message-ID.
 
-    In dry-run mode (no Gmail credentials), logs the would-be email and
-    returns a fake Message-ID so downstream code can store something.
+    The SMTP login is always settings.gmail_address (team mailbox).
+    to_address is the prospect — never used as the sender.
+    from_display_name / reply_to come from the campaign sales rep fields.
     """
     domain = (settings.gmail_address.split("@")[-1] if settings.gmail_address else "niaga.local")
     msg_id = email.utils.make_msgid(domain=domain)
 
     if _dry_run():
         log.warning(
-            "[DRY-RUN] Would send email to=%s subject=%s body_len=%d",
-            to_address, subject, len(body),
+            "[DRY-RUN] Would send FROM %s (display=%s) TO=%s reply_to=%s subject=%s",
+            settings.gmail_address or "niaga",
+            from_display_name,
+            to_address,
+            reply_to,
+            subject,
         )
         return msg_id
 
     msg = EmailMessage()
-    msg["From"] = settings.gmail_address
+    smtp_from = settings.gmail_address
+    if from_display_name and smtp_from:
+        msg["From"] = f"{from_display_name} <{smtp_from}>"
+    else:
+        msg["From"] = smtp_from
+    if reply_to and reply_to.lower() != (smtp_from or "").lower():
+        msg["Reply-To"] = reply_to
     msg["To"] = to_address
     msg["Subject"] = subject
     msg["Message-ID"] = msg_id

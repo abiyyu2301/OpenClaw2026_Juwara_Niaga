@@ -1,5 +1,6 @@
 # --- Secrets & credentials (NEVER COMMIT) ---
 credentials/
+backend/uploads/
 *.json
 !package.json
 !package-lock.json

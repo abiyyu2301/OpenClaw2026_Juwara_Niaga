@@ -36,7 +36,13 @@ function fmtTs(ts?: number): string {
   return d.toLocaleTimeString("en-GB", { hour12: false });
 }
 
-export function AgentFeed({ events }: { events: FeedEvent[] }) {
+export function AgentFeed({
+  events,
+  emptyMessage = "Waiting for agents… press Start Autonomous Run to begin.",
+}: {
+  events: FeedEvent[];
+  emptyMessage?: string;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
@@ -47,12 +53,10 @@ export function AgentFeed({ events }: { events: FeedEvent[] }) {
   return (
     <div
       ref={scrollRef}
-      className="h-[60vh] overflow-y-auto rounded-lg border border-sandstone-200 bg-sandstone-900 text-sandstone-50 font-mono-feed text-[12.5px] leading-[1.55] p-3"
+      className="h-[60vh] overflow-y-auto rounded-lg border border-stone-200 bg-stone-900 text-stone-50 font-mono-feed text-[12.5px] leading-[1.55] p-3"
     >
       {events.length === 0 && (
-        <div className="text-sandstone-400 italic">
-          Waiting for agents… press <strong>Start Autonomous Run</strong> to begin.
-        </div>
+        <div className="text-stone-400 italic">{emptyMessage}</div>
       )}
       {events.map((e, i) => {
         const color = AGENT_COLOR[e.agent] || "text-sandstone-300";

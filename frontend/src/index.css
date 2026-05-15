@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   body {
@@ -14,7 +14,7 @@
 
 @layer utilities {
   .font-serif-display {
-    font-family: "Source Serif Pro", Georgia, serif;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   }
   .font-mono-feed {
     font-family: "JetBrains Mono", ui-monospace, monospace;

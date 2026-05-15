@@ -1,5 +1,7 @@
 /** Email + payment history for an active lead. */
 
+import { useI18n } from "../lib/i18n";
+
 interface EmailHistoryProps {
   drafts?: any[];
   replies?: any[];
@@ -17,11 +19,18 @@ function fmtTime(s?: string): string {
   }
 }
 
-export function EmailHistory({ drafts = [], replies = [], payments = [], onSimulatePay }: EmailHistoryProps) {
+export function EmailHistory({
+  drafts = [],
+  replies = [],
+  payments = [],
+  onSimulatePay,
+}: EmailHistoryProps) {
+  const { t } = useI18n();
+
   if (drafts.length === 0 && replies.length === 0 && payments.length === 0) {
     return (
       <div className="rounded-lg border border-sandstone-200 bg-white p-3 text-xs text-sandstone-500">
-        No outreach yet. Emails will appear here once the agents send them.
+        {t("email_none")}
       </div>
     );
   }
@@ -30,7 +39,7 @@ export function EmailHistory({ drafts = [], replies = [], payments = [], onSimul
       {drafts.length > 0 && (
         <details open className="rounded-lg border border-l-4 border-l-agent-outreach bg-white p-3">
           <summary className="cursor-pointer text-xs uppercase font-bold text-agent-outreach select-none">
-            Outbound emails · {drafts.length}
+            {t("outbound_emails")} · {drafts.length}
           </summary>
           <div className="mt-2 space-y-2">
             {drafts.map((d) => (
@@ -64,7 +73,7 @@ export function EmailHistory({ drafts = [], replies = [], payments = [], onSimul
       {replies.length > 0 && (
         <details className="rounded-lg border border-l-4 border-l-agent-reply bg-white p-3">
           <summary className="cursor-pointer text-xs uppercase font-bold text-agent-reply select-none">
-            Inbound replies · {replies.length}
+            {t("inbound_replies")} · {replies.length}
           </summary>
           <div className="mt-2 space-y-2">
             {replies.map((r) => (
@@ -84,7 +93,7 @@ export function EmailHistory({ drafts = [], replies = [], payments = [], onSimul
                   </span>
                 </div>
                 <div className="text-[10px] text-sandstone-500 mt-0.5">
-                  next action: {r.recommended_next_action} · {fmtTime(r.received_at)}
+                  {t("next_action")}: {r.recommended_next_action} · {fmtTime(r.received_at)}
                 </div>
                 <pre className="whitespace-pre-wrap font-sans text-[11.5px] text-sandstone-700 mt-1 max-h-40 overflow-y-auto">
                   {r.raw_reply_text}
@@ -98,7 +107,7 @@ export function EmailHistory({ drafts = [], replies = [], payments = [], onSimul
       {payments.length > 0 && (
         <details open className="rounded-lg border border-l-4 border-l-agent-closer bg-white p-3">
           <summary className="cursor-pointer text-xs uppercase font-bold text-agent-closer select-none">
-            Payment events · {payments.length}
+            {t("payments_label")} · {payments.length}
           </summary>
           <div className="mt-2 space-y-2">
             {payments.map((p) => (
@@ -136,19 +145,19 @@ export function EmailHistory({ drafts = [], replies = [], payments = [], onSimul
                       onClick={() => onSimulatePay(p.doku_reference_id, "paid")}
                       className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white rounded px-2 py-1"
                     >
-                      Mark paid
+                      {t("mark_paid")}
                     </button>
                     <button
                       onClick={() => onSimulatePay(p.doku_reference_id, "expired")}
                       className="text-[10px] bg-amber-600 hover:bg-amber-700 text-white rounded px-2 py-1"
                     >
-                      Mark expired
+                      {t("mark_expired")}
                     </button>
                     <button
                       onClick={() => onSimulatePay(p.doku_reference_id, "failed")}
                       className="text-[10px] bg-red-600 hover:bg-red-700 text-white rounded px-2 py-1"
                     >
-                      Mark failed
+                      {t("mark_failed")}
                     </button>
                   </div>
                 )}

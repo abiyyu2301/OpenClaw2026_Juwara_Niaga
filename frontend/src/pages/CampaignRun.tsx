@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { AgentFeed } from "../components/AgentFeed";
 import { DebatePanel } from "../components/DebatePanel";
 import { EmailHistory } from "../components/EmailHistory";
 import { LeadKanban } from "../components/LeadKanban";
 import { api, type Campaign, type Lead, type Run } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 import { connectRun, type FeedEvent } from "../lib/ws";
 
 export default function CampaignRun() {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   const campaignId = Number(params.id);
@@ -26,24 +28,21 @@ export default function CampaignRun() {
   const [findError, setFindError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Load campaign + leads on mount
   useEffect(() => {
     if (!campaignId) return;
     api.getCampaign(campaignId).then(setCampaign).catch(() => navigate("/"));
     refreshLeads();
-  }, [campaignId]);
+  }, [campaignId, navigate]);
 
-  // Poll leads + active run while a run is active
   useEffect(() => {
     if (!run || run.status === "completed") return;
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       refreshLeads();
       api.getRun(run.id).then(setRun).catch(() => {});
     }, 2500);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, [run?.id, run?.status]);
 
-  // Refresh active lead detail when selected lead changes or events arrive
   useEffect(() => {
     if (!activeLead) return;
     api.getLead(activeLead.id).then((r: any) => {
@@ -68,7 +67,6 @@ export default function CampaignRun() {
     setEvents([]);
     const r = await api.startRun(campaignId);
     setRun(r);
-    // Connect WebSocket for live feed
     wsRef.current?.close();
     wsRef.current = connectRun(
       r.id,
@@ -77,7 +75,6 @@ export default function CampaignRun() {
           const next = [...prev, evt];
           return next.length > 800 ? next.slice(-800) : next;
         });
-        // Auto-focus on the lead being processed
         if (evt.lead_id) {
           setActiveLead((cur) => cur ?? leads.find((l) => l.id === evt.lead_id) ?? null);
         }
@@ -121,7 +118,7 @@ export default function CampaignRun() {
   async function handleSimulatePay(ref: string, status: "paid" | "failed" | "expired") {
     await api.simulatePay(ref, status);
     if (activeLead) {
-      const r = await api.getLead(activeLead.id) as any;
+      const r = (await api.getLead(activeLead.id)) as any;
       setPayments(r.payments || []);
       setProfile(r.profile);
     }
@@ -130,17 +127,24 @@ export default function CampaignRun() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-4">
-      {/* Top bar */}
-      <div className="flex items-end justify-between mb-3">
-        <div>
-          <h1 className="font-serif-display text-2xl font-bold text-sandstone-900">
+    <div className="flex-1 overflow-auto px-6 py-6">
+      <Link
+        to={`/campaigns/${campaignId}`}
+        className="text-xs text-stone-500 hover:text-stone-800 mb-3 inline-block"
+      >
+        {t("back_overview")}
+      </Link>
+
+      <div className="flex items-end justify-between mb-4 gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-stone-900 truncate">
             {campaign?.name || "…"}
           </h1>
-          <div className="text-xs text-sandstone-500">
-            {campaign?.target_industry} · {campaign?.geography} · max {campaign?.max_leads_per_run} leads/run
+          <p className="text-xs text-stone-500 mt-1 truncate">
+            {campaign?.target_industry} · {campaign?.geography} · {t("card_per_run_prefix")}{" "}
+            {campaign?.max_leads_per_run} {t("max_leads_run")}
             {run && (
-              <span className="ml-3">
+              <span className="ml-2">
                 run #{run.id} ·{" "}
                 <span
                   className={
@@ -148,104 +152,106 @@ export default function CampaignRun() {
                       ? "text-emerald-600"
                       : run.status === "paused"
                       ? "text-amber-600"
-                      : "text-sandstone-500"
+                      : ""
                   }
                 >
                   {run.status}
                 </span>
-                {wsOpen ? "" : " · ws disconnected"}
+                {!wsOpen && run.status === "running" ? " · ws off" : ""}
               </span>
             )}
-          </div>
+          </p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 shrink-0">
           <button
+            type="button"
             onClick={handleFindLeads}
             disabled={findingLeads}
-            className="bg-sandstone-100 border border-sandstone-300 hover:bg-sandstone-200 text-sandstone-900 font-medium rounded px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Use Gemini with Google Search to discover 3 new Indonesian leads matching this ICP"
+            className="text-sm px-3 py-2 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 disabled:opacity-50"
           >
-            {findingLeads ? "Searching the web…" : "🔎 Find new leads"}
+            {findingLeads ? t("finding") : `🔎 ${t("find_leads")}`}
           </button>
           {(!run || run.status === "completed") && (
             <button
+              type="button"
               onClick={handleStart}
-              className="bg-terracotta-600 hover:bg-terracotta-700 text-white font-semibold rounded px-4 py-2"
+              className="text-sm px-4 py-2 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-800"
             >
-              ▶ Start Autonomous Run
+              ▶ {t("start_run")}
             </button>
           )}
           {run?.status === "running" && (
             <button
+              type="button"
               onClick={handlePause}
-              className="bg-sandstone-200 hover:bg-sandstone-300 text-sandstone-900 rounded px-4 py-2"
+              className="text-sm px-3 py-2 rounded-lg border border-stone-300 bg-white"
             >
-              ⏸ Pause
+              ⏸ {t("pause")}
             </button>
           )}
           {run?.status === "paused" && (
             <button
+              type="button"
               onClick={handleResume}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-4 py-2"
+              className="text-sm px-3 py-2 rounded-lg bg-emerald-600 text-white"
             >
-              ▶ Resume
+              ▶ {t("resume")}
             </button>
           )}
           {run && run.status !== "completed" && (
             <button
+              type="button"
               onClick={handleStop}
-              className="bg-sandstone-200 hover:bg-sandstone-300 text-sandstone-900 rounded px-4 py-2"
+              className="text-sm px-3 py-2 rounded-lg border border-stone-300 bg-white"
             >
-              ■ Stop
+              ■ {t("stop")}
             </button>
           )}
         </div>
       </div>
 
       {findError && (
-        <div className="mb-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2">
-          Find leads failed: {findError}
+        <div className="mb-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2">
+          {findError}
         </div>
       )}
 
-      {/* KPI tiles */}
-      <div className="grid grid-cols-5 gap-2 mb-3">
-        <Tile label="Processed" value={run?.leads_processed ?? 0} />
-        <Tile label="Qualified" value={run?.leads_qualified ?? 0} />
-        <Tile label="Emails sent" value={run?.emails_sent ?? 0} />
-        <Tile label="Deals closed" value={run?.deals_closed ?? 0} accent />
-        <Tile
-          label="Revenue"
-          value={run ? `Rp ${run.total_revenue.toLocaleString()}` : "Rp 0"}
+      <div className="grid grid-cols-5 gap-2 mb-4">
+        <Kpi label={t("processed")} value={run?.leads_processed ?? 0} />
+        <Kpi label={t("qualified")} value={run?.leads_qualified ?? 0} />
+        <Kpi label={t("emails_sent")} value={run?.emails_sent ?? 0} />
+        <Kpi label={t("deals_closed")} value={run?.deals_closed ?? 0} />
+        <Kpi
+          label={t("revenue")}
+          value={run ? `Rp ${run.total_revenue.toLocaleString("id-ID")}` : "Rp 0"}
           accent
         />
       </div>
 
-      {/* 3-column layout */}
-      <div className="grid grid-cols-12 gap-3">
+      <div className="grid grid-cols-12 gap-4">
         <div className="col-span-5">
-          <h2 className="text-xs uppercase tracking-wider text-sandstone-500 mb-1">
-            Lead pipeline
+          <h2 className="text-[10px] uppercase tracking-wider text-stone-500 mb-2 font-semibold">
+            {t("lead_pipeline")}
           </h2>
           <LeadKanban leads={leads} activeLeadId={activeLead?.id} onSelect={setActiveLead} />
         </div>
         <div className="col-span-4">
-          <h2 className="text-xs uppercase tracking-wider text-sandstone-500 mb-1">
-            Agent feed (live)
+          <h2 className="text-[10px] uppercase tracking-wider text-stone-500 mb-2 font-semibold">
+            {t("agent_feed")}
           </h2>
-          <AgentFeed events={events} />
+          <AgentFeed events={events} emptyMessage={t("waiting_agents")} />
         </div>
         <div className="col-span-3 space-y-3">
           <div>
-            <h2 className="text-xs uppercase tracking-wider text-sandstone-500 mb-1">
-              Active lead
+            <h2 className="text-[10px] uppercase tracking-wider text-stone-500 mb-2 font-semibold">
+              {t("active_lead")}
             </h2>
             <DebatePanel lead={activeLead} profile={profile} debate={debate} />
           </div>
           {activeLead && (
             <div>
-              <h2 className="text-xs uppercase tracking-wider text-sandstone-500 mb-1">
-                Emails & payments
+              <h2 className="text-[10px] uppercase tracking-wider text-stone-500 mb-2 font-semibold">
+                {t("emails_payments")}
               </h2>
               <EmailHistory
                 drafts={drafts}
@@ -261,14 +267,20 @@ export default function CampaignRun() {
   );
 }
 
-function Tile({ label, value, accent }: { label: string; value: number | string; accent?: boolean }) {
+function Kpi({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number | string;
+  accent?: boolean;
+}) {
   return (
-    <div className="rounded border border-sandstone-200 bg-white px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-sandstone-500">{label}</div>
+    <div className="rounded-xl border border-stone-200 bg-white px-3 py-3 shadow-sm">
+      <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">{label}</div>
       <div
-        className={`font-serif-display text-2xl font-bold ${
-          accent ? "text-terracotta-600" : "text-sandstone-900"
-        }`}
+        className={`text-2xl font-bold mt-0.5 ${accent ? "text-orange-600" : "text-stone-900"}`}
       >
         {value}
       </div>

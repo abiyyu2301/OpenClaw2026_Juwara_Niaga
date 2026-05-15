@@ -41,6 +41,7 @@ from db.models import (
     PaymentEvent, Reply,
 )
 from db.session import SessionLocal
+from campaign_context import email_sender, format_geography, icp_dict, offer_dict, outreach_context
 from settings import settings
 from tools.email import poll_inbox, send_email
 from tools.payment import get_payment_provider
@@ -69,24 +70,11 @@ def is_paused(run_id: int) -> bool:
 # ---- helpers -----------------------------------------------------------
 
 def _icp_dict(campaign: Campaign) -> dict:
-    return {
-        "name": campaign.name,
-        "target_industry": campaign.target_industry,
-        "company_size": campaign.company_size,
-        "geography": campaign.geography,
-        "buyer_role": campaign.buyer_role,
-        "pain_points": campaign.pain_points,
-        "disqualifiers": campaign.disqualifiers,
-    }
+    return icp_dict(campaign)
 
 
 def _offer_dict(campaign: Campaign) -> dict:
-    return {
-        "offer": campaign.offer,
-        "pricing_range_min": campaign.pricing_range_min,
-        "pricing_range_max": campaign.pricing_range_max,
-        "currency": campaign.currency,
-    }
+    return offer_dict(campaign)
 
 
 def _lead_dict(lead: Lead) -> dict:
@@ -241,6 +229,7 @@ async def _process_lead(db: Session, campaign: Campaign, run: AgentRun, lead: Le
         profile=profile,
         angle=verdict.get("recommended_outreach_angle", ""),
         offer=offer,
+        outreach_ctx=outreach_context(campaign),
     )
     email = email_result.data
     if email.get("_parse_error"):
@@ -262,10 +251,13 @@ async def _process_lead(db: Session, campaign: Campaign, run: AgentRun, lead: Le
     if campaign.autonomous_mode and lead.email:
         await _stream_run_event(run.id, "outreach", "tool_call", f"sending email to {lead.email}", lead_id=lead.id)
         try:
+            sender = email_sender(campaign)
             msg_id = await send_email(
                 to_address=lead.email,
                 subject=draft.subject,
                 body=draft.body,
+                from_display_name=sender["from_display_name"],
+                reply_to=sender["reply_to"],
             )
             draft.smtp_message_id = msg_id
             draft.sent_at = datetime.now(timezone.utc)
@@ -445,7 +437,14 @@ async def _close_with_payment(db: Session, run: AgentRun, lead: Lead, reply_anal
 
     if lead.email:
         try:
-            await send_email(to_address=lead.email, subject=subject, body=body_with_link)
+            sender = email_sender(campaign)
+            await send_email(
+                to_address=lead.email,
+                subject=subject,
+                body=body_with_link,
+                from_display_name=sender["from_display_name"],
+                reply_to=sender["reply_to"],
+            )
             run.emails_sent = (run.emails_sent or 0) + 1
             db.commit()
             await _stream_run_event(

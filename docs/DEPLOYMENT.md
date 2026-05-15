@@ -68,6 +68,26 @@ gcloud iam service-accounts describe niaga-backend@niaga-496405.iam.gserviceacco
 | Service account credentials | Attached to the Cloud Run service, NOT baked into the image |
 | `.env` | Not in the image. Env vars set on the Cloud Run service (see below). |
 
+## Campaign assets (GCS)
+
+Promo posters/videos upload to bucket `gs://niaga-496405-assets` (public read). Set on the service:
+
+```powershell
+gcloud run services update niaga --region asia-southeast2 --project niaga-496405 `
+  --set-env-vars "GCS_BUCKET=niaga-496405-assets"
+```
+
+## Google Maps (Places autocomplete)
+
+Enable Maps/Places/Geocoding APIs (done via `scripts/deploy-gcp.ps1`), then create a **Browser API key** in GCP Console → APIs & Services → Credentials. Restrict to Maps JavaScript API + Places API and your Cloud Run URL.
+
+```powershell
+gcloud run services update niaga --region asia-southeast2 --project niaga-496405 `
+  --update-env-vars "GOOGLE_MAPS_API_KEY=AIza..."
+```
+
+The frontend loads the key from `GET /api/campaigns/config/public`.
+
 ## Setting environment variables on the service
 
 For email / DOKU / etc. credentials, use Cloud Run env vars rather than the local `.env` file:

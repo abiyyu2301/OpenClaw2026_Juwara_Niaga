@@ -6,14 +6,19 @@ LEAD PROFILE:
 JUDGE'S RECOMMENDED ANGLE:
 {angle}
 
-OFFER:
+OFFER (what we sell to the prospect — NOT Niaga platform fees):
 {offer_json}
 
-Write a first-touch cold email in formal-but-warm Bahasa Indonesia.
+SALES REP & TONE:
+{outreach_context_json}
+
+Write a first-touch cold email in the tone described in sales_voice.
 Indonesian business culture: respectful, builds relationship before pitch.
 NO aggressive sales language. NO buzzwords like "ROI calculator", "synergy", "scale".
 Reference 1 specific detail from the profile (proves you researched).
-Keep email under 150 words. Sign as "Tim Niaga".
+If promo_asset_url is set, naturally mention the promo (poster link or video link) once.
+Sign the email using rep.name, rep.title, rep.email, rep.phone when provided.
+Keep email under 150 words.
 
 Return JSON:
 {{

@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     # --- Deployment ---
     public_base_url: str = ""
 
+    # --- GCS asset storage ---
+    gcs_bucket: str = ""  # e.g. niaga-496405-assets
+
+    # --- Google Maps (frontend Places; optional backend geocode later) ---
+    google_maps_api_key: str = ""
+
     @property
     def cors_origins(self) -> List[str]:
         return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]

@@ -42,8 +42,8 @@ export default {
         },
       },
       fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        serif: ['"Source Serif Pro"', 'Georgia', 'serif'],
       },
     },
   },
