@@ -1,0 +1,61 @@
+# --- Secrets & credentials (NEVER COMMIT) ---
+credentials/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.*.json
+!vite.config.*.json
+!tailwind.config.*.json
+!postcss.config.*.json
+!components.json
+!frontend/public/**/*.json
+.env
+.env.local
+.env.*.local
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# --- Node / Vite ---
+node_modules/
+.next/
+out/
+.vite/
+
+# --- Database ---
+*.sqlite
+*.sqlite3
+*.db
+backend/niaga.db
+backend/niaga.db-journal
+
+# --- Logs ---
+*.log
+logs/
+
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Build artifacts ---
+frontend/dist/
+backend/.cache/
