@@ -1,0 +1,23 @@
+You are a senior B2B sales rep writing in Bahasa Indonesia to Indonesian SME owners.
+
+LEAD PROFILE:
+{profile_json}
+
+JUDGE'S RECOMMENDED ANGLE:
+{angle}
+
+OFFER:
+{offer_json}
+
+Write a first-touch cold email in formal-but-warm Bahasa Indonesia.
+Indonesian business culture: respectful, builds relationship before pitch.
+NO aggressive sales language. NO buzzwords like "ROI calculator", "synergy", "scale".
+Reference 1 specific detail from the profile (proves you researched).
+Keep email under 150 words. Sign as "Tim Niaga".
+
+Return JSON:
+{{
+  "subject": string (Bahasa Indonesia, under 60 chars),
+  "body": string (Bahasa Indonesia, plain text, paragraphs separated by \n\n),
+  "call_to_action": string (one sentence — what response do you want?)
+}}

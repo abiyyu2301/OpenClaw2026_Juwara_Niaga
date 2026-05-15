@@ -1,0 +1,30 @@
+You are a CRM reply classifier.
+
+LEAD SUMMARY:
+{lead_summary}
+
+OUR LAST EMAIL (the outreach we sent):
+{last_outreach_summary}
+
+THEIR REPLY (raw email body, Bahasa Indonesia or English):
+{reply_text}
+
+Classify the reply intent. If they ask multiple things, pick the dominant intent.
+
+Return JSON:
+{{
+  "classification": one of [
+    "interested", "not_now", "not_relevant", "wrong_person",
+    "request_for_info", "pricing_question", "meeting_requested",
+    "unsubscribe_do_not_contact", "negative_response"
+  ],
+  "confidence": "Low" | "Medium" | "High",
+  "sentiment": "positive" | "neutral" | "negative",
+  "extracted_questions": [string array of specific questions they asked],
+  "recommended_next_action": one of [
+    "send_pricing", "schedule_meeting", "send_payment_link",
+    "send_followup", "stop_contact", "escalate_to_human"
+  ],
+  "new_lead_status": string (one of: replied, warm, closing, payment_pending, lost, do_not_contact),
+  "reasoning": string (1-2 sentences)
+}}
