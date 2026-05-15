@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/components/agentfeed.tsx","./src/components/debatepanel.tsx","./src/components/leadkanban.tsx","./src/lib/api.ts","./src/lib/ws.ts","./src/pages/campaignnew.tsx","./src/pages/campaignrun.tsx","./src/pages/dashboard.tsx"],"version":"5.9.3"}

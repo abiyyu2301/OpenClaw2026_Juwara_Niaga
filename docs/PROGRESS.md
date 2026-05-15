@@ -19,9 +19,18 @@ Live status doc updated as each phase ships. If a new Claude session picks this 
 | 1 Core agents (Prospector, Bull, Bear, Judge) | 11:45–14:30 | ✅ DONE |
 | 2 Outreach + Reply + email + orchestrator | 14:30–16:30 | ✅ DONE |
 | 3 Closer + AfterCare + payment provider + webhook | 16:30–18:30 | ✅ DONE |
-| 4 Demo UX polish (live feed, kanban, debate panel) | 18:30–20:00 | 🔨 NEXT |
-| 5 Final deploy + demo prep | 20:00–21:30 | ⏳ Pending |
-| 6 Pitch + submit | 21:30–23:00 | ⏳ Pending |
+| 4 Demo UX (live feed, kanban, debate panel, campaign UI) | 18:30–20:00 | ✅ DONE |
+| 5 Demo prep (seed CSV, deploy guide) | 20:00–21:30 | ✅ DONE |
+| 6 Pitch deck + Devpost submission content | 21:30–23:00 | ✅ DONE |
+
+## Remaining work — handed off to you (the user) for final submission
+
+These are the steps Claude can't do (require your phone, payment, video recording, manual upload):
+
+1. **Deploy to Sumopod VPS** — follow `docs/DEPLOYMENT.md`. ~15 min if you have an SSH-ready VPS. Optional but worth +10% in the Real-World Deployability score.
+2. **Record the demo video** — use the script in `docs/SUBMISSION.md`. Run locally (`uvicorn` + `npm run dev`), screen-record, narrate. Target 1:50. Upload to YouTube as **Unlisted**.
+3. **Build the 5-slide PDF deck** — copy content from `docs/PITCH_DECK.md` into Google Slides → export as `OpenClaw2026_Juwara_Niaga.pdf`.
+4. **Devpost submission form** — paste the narrative from `docs/SUBMISSION.md`, upload deck + paste video URL + paste GitHub + paste live URL, check **Best Payment Use Case** label, submit before 23:00 WIB May 15.
 
 ## The backend is feature-complete
 
