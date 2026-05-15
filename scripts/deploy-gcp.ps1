@@ -61,7 +61,11 @@ try {
   }
 
   $pairs["GCS_BUCKET"] = $Bucket
-  $pairs["PAYMENT_PROVIDER"] = "mock"
+  # Default to mock only if nothing is set — preserve an existing `doku`
+  # (or other) setting across deploys.
+  if (-not $pairs.ContainsKey("PAYMENT_PROVIDER")) {
+    $pairs["PAYMENT_PROVIDER"] = "mock"
+  }
 
   if ($env:GOOGLE_MAPS_API_KEY) {
     $pairs["GOOGLE_MAPS_API_KEY"] = $env:GOOGLE_MAPS_API_KEY
@@ -86,6 +90,7 @@ try {
     --allow-unauthenticated `
     --memory 1Gi `
     --timeout 600 `
+    --min-instances 1 `
     --max-instances 2 `
     --port 8080 `
     --set-env-vars $envLine `

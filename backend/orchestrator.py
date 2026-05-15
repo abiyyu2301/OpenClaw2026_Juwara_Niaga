@@ -273,30 +273,46 @@ async def _process_lead(db: Session, campaign: Campaign, run: AgentRun, lead: Le
 
 # ---- inbox loop --------------------------------------------------------
 
-async def inbox_loop(run_id: int) -> None:
-    """Poll for replies and classify them. Runs alongside run_campaign."""
+async def global_inbox_loop() -> None:
+    """Always-on IMAP poller, decoupled from any specific run.
+
+    Started by the FastAPI lifespan so replies are picked up regardless of
+    whether anyone has manually clicked "Start Autonomous Run". A reply is
+    matched to a lead, then attached to the most recent run for that lead's
+    campaign so the existing UI event stream still works.
+    """
+    log.info("global_inbox_loop started, polling every %ds", settings.imap_poll_interval_seconds)
     while True:
-        if is_paused(run_id):
-            await asyncio.sleep(settings.imap_poll_interval_seconds)
-            continue
-
-        db = SessionLocal()
         try:
-            run = db.query(AgentRun).get(run_id)
-            if not run or run.status not in ("running", "paused"):
-                return
-
-            replies = await poll_inbox()
-            for incoming in replies:
-                lead = _match_reply_to_lead(db, incoming)
-                if not lead:
-                    log.info("Unmatched reply from %s", incoming.from_address)
-                    continue
-
-                await _handle_reply(db, run, lead, incoming)
-        finally:
-            db.close()
-
+            db = SessionLocal()
+            try:
+                replies = await poll_inbox()
+                for incoming in replies:
+                    lead = _match_reply_to_lead(db, incoming)
+                    if not lead:
+                        log.info("Unmatched reply from %s", incoming.from_address)
+                        continue
+                    # Replies always follow outreach, which is always sent
+                    # inside a run, so there should be at least one run for
+                    # this campaign. If not, log and skip — handling without a
+                    # run context would require restructuring _handle_reply.
+                    run = (
+                        db.query(AgentRun)
+                        .filter(AgentRun.campaign_id == lead.campaign_id)
+                        .order_by(AgentRun.id.desc())
+                        .first()
+                    )
+                    if not run:
+                        log.warning(
+                            "Reply for lead %d but no run on campaign %d",
+                            lead.id, lead.campaign_id,
+                        )
+                        continue
+                    await _handle_reply(db, run, lead, incoming)
+            finally:
+                db.close()
+        except Exception:
+            log.exception("global_inbox_loop iteration failed")
         await asyncio.sleep(settings.imap_poll_interval_seconds)
 
 

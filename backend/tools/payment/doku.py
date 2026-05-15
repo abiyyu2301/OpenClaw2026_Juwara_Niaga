@@ -95,11 +95,11 @@ class DOKUPaymentProvider(PaymentProvider):
         # For demo purposes, we rely on the webhook to update payment_events.payment_status.
         return "created"
 
-    async def verify_webhook(self, headers: dict, body: bytes) -> bool:
-        """Verify DOKU HMAC-SHA256 signature.
+    async def verify_webhook(self, headers: dict, body: bytes, path: str = "/webhooks/doku") -> bool:
+        """Verify DOKU HMAC-SHA256 signature per DOKU's standard scheme.
 
-        DOKU sends: Client-Id, Request-Id, Request-Timestamp, Signature headers.
-        Signature = base64(HMAC-SHA256(secret, client_id|request_id|timestamp|sha256(body)))
+        String-to-sign uses `\\n` between key:value pairs; Digest is base64(sha256(body));
+        Signature header is prefixed with `HMACSHA256=`.
         """
         client_id = headers.get("client-id") or headers.get("Client-Id")
         request_id = headers.get("request-id") or headers.get("Request-Id")
@@ -109,22 +109,31 @@ class DOKUPaymentProvider(PaymentProvider):
             return False
         if client_id != settings.doku_client_id:
             return False
-        body_hash = hashlib.sha256(body).hexdigest()
-        to_sign = f"{client_id}|{request_id}|{timestamp}|{body_hash}"
-        expected = base64.b64encode(
-            hmac.new(settings.doku_secret_key.encode(), to_sign.encode(), hashlib.sha256).digest()
+        digest = base64.b64encode(hashlib.sha256(body).digest()).decode()
+        string_to_sign = (
+            f"Client-Id:{client_id}\n"
+            f"Request-Id:{request_id}\n"
+            f"Request-Timestamp:{timestamp}\n"
+            f"Request-Target:{path}\n"
+            f"Digest:{digest}"
+        )
+        expected = "HMACSHA256=" + base64.b64encode(
+            hmac.new(settings.doku_secret_key.encode(), string_to_sign.encode(), hashlib.sha256).digest()
         ).decode()
         return hmac.compare_digest(expected, signature)
 
     def _sign(self, method: str, path: str, body: str) -> tuple[str, str, str]:
-        request_id = uuid.uuid4().hex
+        request_id = str(uuid.uuid4())
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        body_hash = hashlib.sha256(body.encode()).hexdigest()
-        to_sign = (
-            f"{settings.doku_client_id}|{request_id}|{timestamp}|"
-            f"{method}|{path}|{body_hash}"
+        digest = base64.b64encode(hashlib.sha256(body.encode()).digest()).decode()
+        string_to_sign = (
+            f"Client-Id:{settings.doku_client_id}\n"
+            f"Request-Id:{request_id}\n"
+            f"Request-Timestamp:{timestamp}\n"
+            f"Request-Target:{path}\n"
+            f"Digest:{digest}"
         )
-        sig = base64.b64encode(
-            hmac.new(settings.doku_secret_key.encode(), to_sign.encode(), hashlib.sha256).digest()
+        sig = "HMACSHA256=" + base64.b64encode(
+            hmac.new(settings.doku_secret_key.encode(), string_to_sign.encode(), hashlib.sha256).digest()
         ).decode()
         return sig, request_id, timestamp

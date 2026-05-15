@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from db.models import AgentMessage, AgentRun, Campaign
 from db.session import get_db
-from orchestrator import inbox_loop, pause_run, resume_run, run_campaign
+from orchestrator import pause_run, resume_run, run_campaign
 from schemas import AgentMessageOut, RunOut
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -33,10 +33,10 @@ async def start_run(campaign_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(run)
 
-    # Kick off the orchestrator + inbox loop as background tasks.
+    # Reply polling is handled globally by global_inbox_loop (started in
+    # app lifespan), so the per-run inbox_task is no longer needed.
     main_task = asyncio.create_task(run_campaign(campaign_id, run.id))
-    inbox_task = asyncio.create_task(inbox_loop(run.id))
-    _active_tasks[run.id] = [main_task, inbox_task]
+    _active_tasks[run.id] = [main_task]
     return run
 
 

@@ -26,6 +26,8 @@ def _seed_gcp_credentials() -> None:
 
 _seed_gcp_credentials()
 
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,6 +44,8 @@ from websocket import run_socket
 # Import models so SQLAlchemy registers them on Base.metadata before create_all.
 from db import models  # noqa: F401
 
+log = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,7 +54,20 @@ async def lifespan(app: FastAPI):
 
     migrate(engine)
     ensure_campaign_assets_table(engine)
-    yield
+
+    # Always-on IMAP poller: judges don't need to click anything for replies
+    # to be detected. Requires Cloud Run --min-instances=1 to stay warm.
+    from orchestrator import global_inbox_loop
+    poll_task = asyncio.create_task(global_inbox_loop())
+
+    try:
+        yield
+    finally:
+        poll_task.cancel()
+        try:
+            await poll_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 app = FastAPI(

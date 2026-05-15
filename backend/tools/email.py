@@ -10,13 +10,14 @@ This lets the orchestrator be exercised end-to-end without live email creds.
 from __future__ import annotations
 
 import asyncio
+import email
 import email.utils
 import logging
 import re
 import ssl
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import List, Optional
 
@@ -105,10 +106,81 @@ async def send_email(
 
 # ---- receive (IMAP) -----------------------------------------------------
 
-_RE_MID = re.compile(r"Message-ID:\s*(<[^>]+>)", re.IGNORECASE)
-_RE_IRT = re.compile(r"In-Reply-To:\s*(<[^>]+>)", re.IGNORECASE)
-_RE_FROM = re.compile(r"From:\s*(.+)", re.IGNORECASE)
-_RE_SUBJECT = re.compile(r"Subject:\s*(.+)", re.IGNORECASE)
+# Heuristics that mark where the quoted prior message starts. Trim everything
+# from the match onward. Patterns are matched line-anchored, case-insensitive.
+_QUOTE_BOUNDARIES = [
+    re.compile(r"^On\s+.{4,120}wrote:\s*$", re.IGNORECASE),       # Gmail (EN)
+    re.compile(r"^Pada\s+.{4,120}menulis:\s*$", re.IGNORECASE),   # Gmail (ID)
+    re.compile(r"^-{2,}\s*Original Message\s*-{2,}\s*$", re.IGNORECASE),  # Outlook
+    re.compile(r"^From:\s+.+$", re.IGNORECASE),                   # Outlook header block
+    re.compile(r"^_{5,}\s*$"),                                    # underline divider
+]
+
+
+def _extract_plaintext(raw: bytes) -> str:
+    """Parse a full RFC822 message and return the cleaned plain-text body.
+
+    - Picks the text/plain part if present, else converts text/html to text.
+    - Decodes quoted-printable / base64 transfer encoding.
+    - Strips the quoted prior message and trailing `>` lines.
+    """
+    msg = email.message_from_bytes(raw)
+    plain, html = None, None
+    for part in msg.walk():
+        if part.is_multipart():
+            continue
+        ctype = part.get_content_type()
+        if ctype not in ("text/plain", "text/html"):
+            continue
+        payload = part.get_payload(decode=True)
+        if not payload:
+            continue
+        charset = part.get_content_charset() or "utf-8"
+        try:
+            decoded = payload.decode(charset, errors="replace")
+        except (LookupError, TypeError):
+            decoded = payload.decode("utf-8", errors="replace")
+        if ctype == "text/plain" and plain is None:
+            plain = decoded
+        elif ctype == "text/html" and html is None:
+            html = decoded
+
+    body = plain
+    if body is None and html is not None:
+        body = re.sub(r"<[^>]+>", "", html)  # cheap tag strip
+    if body is None:
+        return ""
+
+    # Cut at the first quote boundary we find.
+    lines = body.splitlines()
+    cut_at = len(lines)
+    for i, ln in enumerate(lines):
+        if any(p.match(ln.strip()) for p in _QUOTE_BOUNDARIES):
+            cut_at = i
+            break
+    lines = lines[:cut_at]
+    # Drop trailing blank lines and trailing `>` quote lines.
+    while lines and (not lines[-1].strip() or lines[-1].lstrip().startswith(">")):
+        lines.pop()
+    return "\n".join(lines).strip()
+
+
+def _header(msg: email.message.Message, name: str) -> str:
+    value = msg.get(name, "")
+    if not value:
+        return ""
+    # Decode RFC 2047 encoded-word headers (e.g. "=?UTF-8?Q?...?=")
+    parts = email.header.decode_header(value)
+    out = []
+    for chunk, charset in parts:
+        if isinstance(chunk, bytes):
+            try:
+                out.append(chunk.decode(charset or "utf-8", errors="replace"))
+            except LookupError:
+                out.append(chunk.decode("utf-8", errors="replace"))
+        else:
+            out.append(chunk)
+    return "".join(out).strip()
 
 
 # Synthetic-reply queue for dry-run mode / pre-staged demo
@@ -158,32 +230,35 @@ async def poll_inbox(*, since_uid: int = 0) -> List[InboundReply]:
         await client.wait_hello_from_server()
         await client.login(settings.gmail_address, settings.gmail_app_password)
         await client.select("INBOX")
-        _, data = await client.search("UNSEEN")
+        # Narrow to recent unread mail. A busy personal Gmail can have tens of
+        # thousands of UNSEEN messages — fetching them all would blow the run's
+        # lifetime without ever reaching the actual reply. Replies to outreach
+        # arrive within hours, so a 2-day window catches them.
+        since = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%d-%b-%Y")
+        _, data = await client.search("UNSEEN", "SINCE", since)
         if not data:
             await client.logout()
             return []
         uids = data[0].decode().split()
+        # Hard cap so a sudden flood can't lock up the poller.
+        if len(uids) > 50:
+            log.warning("poll_inbox: %d UNSEEN since %s, capping at 50 newest", len(uids), since)
+            uids = uids[-50:]
         out: list[InboundReply] = []
         for uid in uids:
             _, raw = await client.fetch(uid, "(RFC822)")
             if not raw or len(raw) < 2:
                 continue
             blob = raw[1] if isinstance(raw[1], (bytes, bytearray)) else raw[1].encode()
-            text = blob.decode("utf-8", errors="replace")
-            mid = _RE_MID.search(text)
-            irt = _RE_IRT.search(text)
-            frm = _RE_FROM.search(text)
-            sub = _RE_SUBJECT.search(text)
-            # crude body extraction: text after the first blank line
-            sep = text.find("\r\n\r\n")
-            body = text[sep + 4 :] if sep != -1 else text
+            msg = email.message_from_bytes(blob)
+            body = _extract_plaintext(blob)
             out.append(
                 InboundReply(
-                    message_id=mid.group(1) if mid else f"<imap-{uid}@niaga.local>",
-                    in_reply_to=irt.group(1) if irt else None,
-                    from_address=(frm.group(1).strip() if frm else "").strip(),
-                    subject=(sub.group(1).strip() if sub else "").strip(),
-                    body=body.strip(),
+                    message_id=_header(msg, "Message-ID") or f"<imap-{uid}@niaga.local>",
+                    in_reply_to=_header(msg, "In-Reply-To") or None,
+                    from_address=_header(msg, "From"),
+                    subject=_header(msg, "Subject"),
+                    body=body,
                 )
             )
             await client.store(uid, "+FLAGS", "\\Seen")
