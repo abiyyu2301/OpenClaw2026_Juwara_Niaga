@@ -70,6 +70,7 @@ async def gemini_json(
     response_schema: Optional[Dict[str, Any]] = None,
     max_output_tokens: int = 1500,
     temperature: float = 0.4,
+    thinking_budget: Optional[int] = 0,
 ) -> LLMResult:
     """Call Gemini with native JSON mode and return parsed dict.
 
@@ -80,17 +81,26 @@ async def gemini_json(
         response_schema: optional JSON Schema. If provided, Gemini enforces
             structured output. If omitted, we set response_mime_type=application/json
             and parse loosely.
-        max_output_tokens: hard cap per call
+        max_output_tokens: hard cap on visible tokens (excludes thinking budget)
         temperature: 0.0-1.0
+        thinking_budget: tokens reserved for internal thinking. 0 disables
+            thinking entirely (Gemini 2.5+). Pass None to let the model decide.
+            For cheap, structured-output agents, keep at 0.
     """
     client = get_client()
-    config = types.GenerateContentConfig(
+    config_kwargs: Dict[str, Any] = dict(
         system_instruction=system_instruction,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
         response_mime_type="application/json",
-        **({"response_schema": response_schema} if response_schema else {}),
     )
+    if response_schema:
+        config_kwargs["response_schema"] = response_schema
+    if thinking_budget is not None:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(
+            thinking_budget=thinking_budget
+        )
+    config = types.GenerateContentConfig(**config_kwargs)
     start = time.perf_counter()
     response = await client.aio.models.generate_content(
         model=model,

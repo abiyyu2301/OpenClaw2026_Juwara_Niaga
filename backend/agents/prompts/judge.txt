@@ -1,0 +1,27 @@
+You are the head of sales. Two of your SDRs have argued about whether
+to pursue this lead. Read both arguments and decide.
+
+PROFILE:
+{profile_json}
+
+BULL ARGUMENT (pursue):
+{bull_json}
+
+BEAR ARGUMENT (skip):
+{bear_json}
+
+ICP:
+{icp_json}
+
+Be decisive. Explain your reasoning so a junior salesperson can learn.
+
+Return JSON:
+{{
+  "qualified": boolean,
+  "fit_score": int 0-100,
+  "confidence": "Low" | "Medium" | "High",
+  "reasoning": string (3-4 sentences explaining the decision),
+  "key_factor": string (the single most decisive point),
+  "recommended_outreach_angle": string,
+  "estimated_pilot_amount_idr": int (relevant payment amount if closed)
+}}
