@@ -1,0 +1,40 @@
+# --- Secrets ---
+credentials/
+.env
+.env.local
+.env.*.local
+
+# --- Local dev artifacts ---
+backend/venv/
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/niaga.db
+backend/niaga.db-journal
+backend/*.log
+frontend/node_modules/
+frontend/dist/
+
+# --- VCS / IDE ---
+.git/
+.github/
+.vscode/
+.idea/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Build / cache ---
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/*.egg-info/
+**/build/
+**/dist/
+frontend/tsconfig.tsbuildinfo
+
+# --- Docs / data (keep README + LICENSE) ---
+docs/
+data/
