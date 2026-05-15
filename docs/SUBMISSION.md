@@ -11,7 +11,7 @@ Per the Official Technical Guidelines and the Devpost form fields.
 | **Project Description** | See "Project description (narrative)" below |
 | **What it does** | "Define ICP + offer once. Niaga prospects, debates each lead adversarially (Bull vs Bear vs Judge), drafts Bahasa Indonesia outreach, sends email, classifies replies, decides on a DOKU payment link, and onboards on payment success — zero human clicks." |
 | **Built with** | Python, FastAPI, Google Gemini (Vertex AI), React, Vite, Tailwind, SQLAlchemy, WebSocket, Gmail SMTP/IMAP, DOKU Payment Link |
-| **Try it out (links)** | GitHub: `https://github.com/abiyyu2301/OpenClaw2026_Juwara_Niaga` · Live: (paste Sumopod URL once deployed) |
+| **Try it out (links)** | GitHub: `https://github.com/abiyyu2301/OpenClaw2026_Juwara_Niaga` · **Live: `https://niaga-1029145238833.asia-southeast2.run.app`** |
 | **Video** | Upload to YouTube as **UNLISTED** (per Official Technical Guidelines — note: Devpost EN page says Public, but the ID guidelines doc overrides) · file name `OpenClaw2026_Juwara_Niaga.mp4` |
 | **Pitch deck** | `OpenClaw2026_Juwara_Niaga.pdf` (5 slides max, from `docs/PITCH_DECK.md`) |
 | **AI Tools / Models Used** | "Google Gemini 2.5 Flash (Prospector, Bull, Bear, Reply, AfterCare) and Gemini 2.5 Pro (Judge, Outreach, Closer) via Vertex AI on Google Cloud. All agents return native JSON. Cursor IDE used as the development assistant during the 12-hour build." |

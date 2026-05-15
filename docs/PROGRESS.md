@@ -4,12 +4,32 @@ Live status doc updated as each phase ships. If a new Claude session picks this 
 
 ## Current state at a glance
 
+- **Live URL**: https://niaga-1029145238833.asia-southeast2.run.app ← paste this in Devpost
 - **Repo**: https://github.com/abiyyu2301/OpenClaw2026_Juwara_Niaga (public)
 - **Local**: `C:\Users\abiyy\OpenClaw2026_Juwara_Niaga`
 - **GCP**: project `niaga-496405`, Vertex AI enabled, service account `niaga-backend@niaga-496405.iam.gserviceaccount.com`, JSON key at `credentials/niaga-backend-key.json`
-- **Auth**: gh CLI logged in as `abiyyu2301` (at `C:\Users\abiyy\AppData\Local\Microsoft\WinGet\Packages\GitHub.cli_Microsoft.Winget.Source_8wekyb3d8bbwe\bin\gh.exe`)
+- **Cloud Run service**: `niaga` in region `asia-southeast2` (Jakarta), revision `niaga-00001-w7p`
+- **Auth**: gh CLI logged in as `abiyyu2301`; gcloud logged in as abiyyu.avicena23@gmail.com
 - **Runtime LLM**: Google Gemini via Vertex AI (~$1,150 of credits)
-- **Models**: `gemini-2.5-flash` (cheap tier: Prospector/Bull/Bear/Reply/AfterCare) + `gemini-2.5-pro` (premium: Judge/Outreach/Closer)
+- **Models**: `gemini-2.5-flash` (Prospector/Bull/Bear/Reply/AfterCare) + `gemini-2.5-pro` (Judge/Outreach/Closer/LeadFinder)
+- **LeadFinder**: gemini-2.5-pro with Google Search grounding — discovers real Indonesian SMEs matching the ICP
+
+## Cloud Run notes
+- SQLite is ephemeral on Cloud Run (file system is per-instance). On cold start the DB resets. For a persistent demo, either keep the service warm with one request before the recording, OR migrate to Cloud SQL for Postgres (set DATABASE_URL).
+- Cold start: ~30-60s on first request after idle. Warm: instant.
+- Single uvicorn worker per instance (background tasks need shared state). Max instances: 2.
+- Service account `niaga-backend` runs the container — picks up Vertex AI auth via the metadata server, no JSON key needed in the deployment.
+
+## Re-deploy
+
+After any code change:
+```bash
+cd C:\Users\abiyy\OpenClaw2026_Juwara_Niaga
+gcloud run deploy niaga --source . --region asia-southeast2 --project niaga-496405 \
+  --service-account niaga-backend@niaga-496405.iam.gserviceaccount.com \
+  --allow-unauthenticated --memory 1Gi --timeout 600 --max-instances 2 --port 8080 --quiet
+```
+Takes ~5-10 minutes for a multi-stage Docker build (npm + pip).
 
 ## Phase status
 
