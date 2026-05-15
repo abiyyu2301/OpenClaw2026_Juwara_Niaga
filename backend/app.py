@@ -12,6 +12,7 @@ from db.session import Base, engine
 from routes import campaigns as campaigns_routes
 from routes import leads as leads_routes
 from routes import runs as runs_routes
+from routes import webhooks as webhooks_routes
 from settings import settings
 from websocket import run_socket
 # Import models so SQLAlchemy registers them on Base.metadata before create_all.
@@ -43,6 +44,7 @@ app.add_middleware(
 app.include_router(campaigns_routes.router)
 app.include_router(leads_routes.router)
 app.include_router(runs_routes.router)
+app.include_router(webhooks_routes.router)
 
 
 @app.get("/health")

@@ -1,0 +1,31 @@
+You are a sales closer. A lead has reached commercial intent.
+Decide whether to send a DOKU payment link, and which type.
+
+LEAD SUMMARY:
+{lead_summary}
+
+REPLY ANALYSIS:
+{reply_analysis}
+
+ICP PRICING RANGE (IDR):
+{pricing_range_idr}
+
+DOKU commercial event types available:
+- paid_trial:           small commitment fee, 100-500k IDR
+- pilot_fee:            1-month pilot project, 1-5M IDR
+- consultation_deposit: refundable, 250-500k IDR
+- workshop_booking:     training session deposit, 500k-2M IDR
+- subscription_first:   first month full price
+
+Return JSON:
+{{
+  "should_send_payment_link": boolean,
+  "commercial_event_type": one of the above OR null,
+  "amount_idr": int OR null,
+  "rationale": string,
+  "follow_up_message_bahasa": string (the email body to send WITH the link, Bahasa Indonesia, under 120 words),
+  "follow_up_subject_bahasa": string (subject for the email),
+  "expires_in_hours": int (default 72)
+}}
+
+If should_send_payment_link is false, explain in rationale and set the other amount/type fields to null.

@@ -31,16 +31,19 @@ from sqlalchemy.orm import Session
 
 from agents.bear import BearAgent
 from agents.bull import BullAgent
+from agents.closer import CloserAgent
 from agents.judge import JudgeAgent
 from agents.outreach import OutreachAgent
 from agents.prospector import ProspectorAgent
 from agents.reply import ReplyAgent
 from db.models import (
-    AgentRun, Campaign, Debate, Lead, LeadAIProfile, OutreachDraft, Reply,
+    AgentRun, Campaign, Debate, Lead, LeadAIProfile, OutreachDraft,
+    PaymentEvent, Reply,
 )
 from db.session import SessionLocal
 from settings import settings
 from tools.email import poll_inbox, send_email
+from tools.payment import get_payment_provider
 from websocket import hub
 
 log = logging.getLogger(__name__)
@@ -366,4 +369,89 @@ async def _handle_reply(db: Session, run: AgentRun, lead: Lead, incoming) -> Non
         lead_id=lead.id,
     )
 
-    # Closer handling happens in Phase 3 — for now we just record the reply.
+    # Closer handoff: any commercial intent (pricing question, meeting request,
+    # explicit ask for a link) wakes the Closer. The Closer makes the final
+    # call about whether to actually send a payment link.
+    commercial_signals = {
+        "send_payment_link", "send_pricing", "schedule_meeting",
+    }
+    classification = data.get("classification", "")
+    if (
+        data.get("recommended_next_action") in commercial_signals
+        or classification in {"interested", "pricing_question", "meeting_requested"}
+    ):
+        await _close_with_payment(db, run, lead, data)
+
+
+async def _close_with_payment(db: Session, run: AgentRun, lead: Lead, reply_analysis: dict) -> None:
+    """Closer + payment provider + email handoff. Mock or DOKU per settings."""
+    campaign = db.query(Campaign).get(lead.campaign_id)
+    pricing = {
+        "min": campaign.pricing_range_min,
+        "max": campaign.pricing_range_max,
+        "currency": campaign.currency,
+    }
+    closer = CloserAgent(db=db, run_id=run.id, lead_id=lead.id)
+    decision_result = await closer.run(
+        lead_summary=f"{lead.company_name} ({lead.industry}) — buyer: {lead.buyer_name}",
+        reply_analysis=reply_analysis,
+        pricing_range_idr=pricing,
+    )
+    decision = decision_result.data
+    if decision.get("_parse_error") or not decision.get("should_send_payment_link"):
+        await _stream_run_event(
+            run.id, "closer", "decision",
+            f"Decided NOT to send link: {decision.get('rationale', '')[:120]}",
+            lead_id=lead.id,
+        )
+        return
+
+    if not campaign.autonomous_mode:
+        await _stream_run_event(run.id, "closer", "decision", "Autonomous mode off — link not sent", lead_id=lead.id)
+        return
+
+    provider = get_payment_provider()
+    amount = int(decision.get("amount_idr") or 0)
+    event_type = decision.get("commercial_event_type") or "consultation_deposit"
+    expires_in_hours = int(decision.get("expires_in_hours") or 72)
+
+    await _stream_run_event(run.id, "closer", "tool_call", f"creating {provider.name} payment link Rp{amount:,}", lead_id=lead.id)
+    link = await provider.create_payment_link(
+        amount=amount,
+        currency=campaign.currency or "IDR",
+        description=event_type,
+        expires_in_hours=expires_in_hours,
+        lead_id=lead.id,
+        reference=f"lead-{lead.id}",
+    )
+
+    db.add(PaymentEvent(
+        lead_id=lead.id,
+        commercial_event_type=event_type,
+        amount=amount,
+        currency=campaign.currency or "IDR",
+        payment_link=link.url,
+        payment_status="created",
+        doku_reference_id=link.reference_id,
+        expires_at=link.expires_at,
+    ))
+    _set_lead_status(db, lead, "payment_pending")
+    db.commit()
+
+    # Send the follow-up email with the link.
+    subject = decision.get("follow_up_subject_bahasa") or f"Link Pembayaran — {event_type}"
+    body = decision.get("follow_up_message_bahasa") or ""
+    body_with_link = f"{body}\n\nLink pembayaran: {link.url}\nBerlaku selama {expires_in_hours} jam.\n\nSalam hangat,\nTim Niaga"
+
+    if lead.email:
+        try:
+            await send_email(to_address=lead.email, subject=subject, body=body_with_link)
+            run.emails_sent = (run.emails_sent or 0) + 1
+            db.commit()
+            await _stream_run_event(
+                run.id, "closer", "message_out",
+                f"Sent payment link Rp{amount:,} to {lead.email}",
+                lead_id=lead.id,
+            )
+        except Exception as exc:
+            log.exception("Closer email send failed: %s", exc)
