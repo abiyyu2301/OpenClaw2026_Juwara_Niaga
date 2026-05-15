@@ -1,7 +1,26 @@
 # Deploy Niaga to Cloud Run (project niaga-496405)
 # Usage: .\scripts\deploy-gcp.ps1
+# Requires: committed + pushed main (see git check below).
+# Optional env before deploy: GOOGLE_MAPS_API_KEY, GMAIL_ADDRESS, GMAIL_APP_PASSWORD
 
 $ErrorActionPreference = "Stop"
+
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+Push-Location $RepoRoot
+try {
+  $dirty = git status --porcelain
+  if ($dirty) {
+    throw "Uncommitted changes. Commit and push to GitHub before deploying."
+  }
+  git fetch origin main 2>$null | Out-Null
+  $ahead = (git rev-list --count origin/main..HEAD 2>$null)
+  if ($ahead -and [int]$ahead -gt 0) {
+    Write-Host "Pushing $ahead commit(s) to origin/main..."
+    git push origin main
+  }
+} finally {
+  Pop-Location
+}
 $Project = "niaga-496405"
 $Region = "asia-southeast2"
 $Service = "niaga"
@@ -36,6 +55,14 @@ if (-not $MapsKey) {
 
 $EnvVars = "GCS_BUCKET=$Bucket,PAYMENT_PROVIDER=mock"
 if ($MapsKey) { $EnvVars += ",GOOGLE_MAPS_API_KEY=$MapsKey" }
+$GmailAddr = $env:GMAIL_ADDRESS
+$GmailPw = $env:GMAIL_APP_PASSWORD
+if ($GmailAddr -and $GmailPw) {
+  $EnvVars += ",GMAIL_ADDRESS=$GmailAddr,GMAIL_APP_PASSWORD=$GmailPw"
+  Write-Host "Including GMAIL_ADDRESS on Cloud Run (app password from env)."
+} elseif ($GmailAddr -or $GmailPw) {
+  Write-Host "WARN: Set both GMAIL_ADDRESS and GMAIL_APP_PASSWORD to enable live email."
+}
 
 Write-Host "Deploying to Cloud Run..."
 gcloud run deploy $Service `

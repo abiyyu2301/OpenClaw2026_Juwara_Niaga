@@ -14,6 +14,13 @@ Niaga is currently deployed to **Google Cloud Run** in the `niaga-496405` GCP pr
 
 ## Re-deploy after a code change
 
+**Always commit and push to GitHub before deploying** so Cloud Run matches `origin/main`. The helper script enforces this:
+
+```powershell
+git add -A && git commit -m "your message" && git push origin main
+.\scripts\deploy-gcp.ps1
+```
+
 From the repo root, with `gcloud` authenticated as a user that has Cloud Run + Cloud Build permissions (project owner or `roles/run.admin` + `roles/cloudbuild.builds.builder`):
 
 ```powershell
