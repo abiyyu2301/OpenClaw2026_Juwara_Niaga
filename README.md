@@ -35,7 +35,7 @@ Plus an **Orchestrator** loop (deterministic, no LLM) and an **AfterCare** agent
 - **Email**: Gmail SMTP (send) + IMAP (receive)
 - **Payment**: DOKU Payment Link API · mock adapter fallback
 - **Database**: SQLite (build) · Postgres-ready (deploy)
-- **Hosting**: Sumopod VPS
+- **Hosting**: Google Cloud Run (`niaga-496405` project, region `asia-southeast2`) — live at https://niaga-1029145238833.asia-southeast2.run.app
 
 ## Getting started
 

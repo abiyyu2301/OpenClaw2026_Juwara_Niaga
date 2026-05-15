@@ -73,6 +73,6 @@ Per the Official Technical Guidelines and the Devpost form fields.
 - [ ] Deck file naming: `OpenClaw2026_Juwara_Niaga.pdf` → max 5 slides
 - [ ] Devpost team naming: `OpenClaw2026_Juwara`
 - [ ] **Best Payment Use Case** label selected on Devpost
-- [ ] Live deployment URL (Sumopod) tested in incognito (no auth wall)
+- [ ] Live deployment URL https://niaga-1029145238833.asia-southeast2.run.app tested in incognito (no auth wall)
 - [ ] Project Description filled in with the narrative above
 - [ ] AI Tools / Models Used filled with the specific Gemini IDs per agent

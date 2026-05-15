@@ -79,7 +79,7 @@ Every agent decision is logged to the `agent_messages` table — the evidence lo
 | **Autonomous + Supervised modes** | One env var to switch between fully autonomous and human-approval-between-steps for real-world deployability. |
 
 **Stack:**
-FastAPI · Python 3.12 · SQLAlchemy · plain async (no LangGraph overhead) · WebSocket · React + Vite + Tailwind · Vertex AI Gemini 2.5 (Flash for cheap, Pro for reasoning) · Gmail SMTP/IMAP · DOKU Payment Link API + MockPaymentProvider fallback · Sumopod VPS · SQLite (build) / Postgres-ready (deploy).
+FastAPI · Python 3.12 · SQLAlchemy · plain async (no LangGraph overhead) · WebSocket · React + Vite + Tailwind · Vertex AI Gemini 2.5 (Flash for cheap, Pro for reasoning) · Gmail SMTP/IMAP · DOKU Payment Link API + MockPaymentProvider fallback · Google Cloud Run (region `asia-southeast2` / Jakarta) · SQLite (build) / Postgres-ready (deploy).
 
 ---
 
@@ -96,4 +96,4 @@ FastAPI · Python 3.12 · SQLAlchemy · plain async (no LangGraph overhead) · W
 
 **Impact:** If Niaga gets 1% of Indonesia's 65M SMEs to automate a single deal flow, that's **650K SMEs reclaiming 10+ hours/week from manual sales** — a real productivity story for a market that doesn't get built for.
 
-**Footer:** Demo video → (paste YouTube unlisted link) · GitHub → github.com/abiyyu2301/OpenClaw2026_Juwara_Niaga · Live → (paste Sumopod URL)
+**Footer:** Demo video → (paste YouTube unlisted link) · GitHub → github.com/abiyyu2301/OpenClaw2026_Juwara_Niaga · Live → https://niaga-1029145238833.asia-southeast2.run.app

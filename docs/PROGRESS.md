@@ -47,8 +47,8 @@ Takes ~5-10 minutes for a multi-stage Docker build (npm + pip).
 
 These are the steps Claude can't do (require your phone, payment, video recording, manual upload):
 
-1. **Deploy to Sumopod VPS** — follow `docs/DEPLOYMENT.md`. ~15 min if you have an SSH-ready VPS. Optional but worth +10% in the Real-World Deployability score.
-2. **Record the demo video** — use the script in `docs/SUBMISSION.md`. Run locally (`uvicorn` + `npm run dev`), screen-record, narrate. Target 1:50. Upload to YouTube as **Unlisted**.
+1. ~~Deploy~~ ✅ Niaga is live on Google Cloud Run at https://niaga-1029145238833.asia-southeast2.run.app. To re-deploy after changes, see `docs/DEPLOYMENT.md`.
+2. **Record the demo video** — use the script in `docs/SUBMISSION.md`. Run against the live URL (warm it with one request first to avoid the cold-start), screen-record, narrate. Target 1:50. Upload to YouTube as **Unlisted**.
 3. **Build the 5-slide PDF deck** — copy content from `docs/PITCH_DECK.md` into Google Slides → export as `OpenClaw2026_Juwara_Niaga.pdf`.
 4. **Devpost submission form** — paste the narrative from `docs/SUBMISSION.md`, upload deck + paste video URL + paste GitHub + paste live URL, check **Best Payment Use Case** label, submit before 23:00 WIB May 15.
 
@@ -125,7 +125,7 @@ If smoke test breaks, run `python backend\tests\test_gemini_smoke.py` to diagnos
 ## Known issues / decisions log
 
 - DOKU MCP server credentials require a 15-30 min consultation booking, so we ship `MockPaymentProvider` as the primary demo path with the real DOKU adapter as a fallback. Form submitted: https://forms.doku.com/agentic-payments
-- Sumopod VPS deployment deferred to Phase 5 (no point deploying empty app every commit).
+- Pivoted from the original Sumopod VPS plan to Google Cloud Run. Same GCP project as the Vertex AI Gemini credits, attached service account auth (no JSON key in production), native WebSocket support, scale-to-zero. Sumopod VPS path documented as an alternative in `docs/DEPLOYMENT.md`.
 - Test of `gemini-2.5-pro` with `max_output_tokens=80` returned empty text — the thinking budget consumed the entire output cap. **For premium-tier agents, allocate ≥800 max_output_tokens.**
 - Pydantic v2 protected namespaces: settings.py uses `protected_namespaces=()` so `model_*` field names don't warn.
 - Windows console encoding: avoid Unicode arrows/checkmarks in print statements (cp1252 charmap doesn't have them).
