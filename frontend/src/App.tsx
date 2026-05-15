@@ -1,5 +1,7 @@
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
+import CampaignNew from "./pages/CampaignNew";
+import CampaignRun from "./pages/CampaignRun";
 
 const NAV = [
   { to: "/", label: "Dashboard" },
@@ -41,17 +43,11 @@ export default function App() {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route
-            path="/campaigns/new"
-            element={<Placeholder title="New Campaign" note="Coming in Phase 1" />}
-          />
-          <Route
-            path="/campaigns/:id/run"
-            element={<Placeholder title="Live Agent Feed" note="Coming in Phase 2" />}
-          />
+          <Route path="/campaigns/new" element={<CampaignNew />} />
+          <Route path="/campaigns/:id/run" element={<CampaignRun />} />
           <Route
             path="/leads"
-            element={<Placeholder title="Lead Kanban" note="Coming in Phase 2" />}
+            element={<Placeholder title="Lead Kanban" note="See Campaign Run page for the live demo view." />}
           />
         </Routes>
       </main>

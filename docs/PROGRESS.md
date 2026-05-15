@@ -17,11 +17,33 @@ Live status doc updated as each phase ships. If a new Claude session picks this 
 |---|---|---|
 | 0 Lock & Load | 09:45–10:15 | ✅ DONE |
 | 1 Core agents (Prospector, Bull, Bear, Judge) | 11:45–14:30 | ✅ DONE |
-| 2 Outreach + email + Reply + orchestrator | 14:30–16:30 | 🔨 NEXT |
-| 3 DOKU closer + webhook + AfterCare | 16:30–18:30 | ⏳ Pending |
-| 4 Demo UX polish (live feed, kanban, debate panel) | 18:30–20:00 | ⏳ Pending |
+| 2 Outreach + Reply + email + orchestrator | 14:30–16:30 | ✅ DONE |
+| 3 Closer + AfterCare + payment provider + webhook | 16:30–18:30 | ✅ DONE |
+| 4 Demo UX polish (live feed, kanban, debate panel) | 18:30–20:00 | 🔨 NEXT |
 | 5 Final deploy + demo prep | 20:00–21:30 | ⏳ Pending |
 | 6 Pitch + submit | 21:30–23:00 | ⏳ Pending |
+
+## The backend is feature-complete
+
+End-to-end test (`backend/tests/test_webhook.py`) verifies the complete autonomous loop with zero human intervention:
+
+```
+new lead -> Prospector (gemini-2.5-flash, 0 thinking)
+         -> Bull || Bear (parallel, gemini-2.5-flash, 0 thinking)
+         -> Judge verdict (gemini-2.5-pro, thinking=1024)  -> QUALIFIED, fit 85
+         -> Outreach (BI email, gemini-2.5-pro, thinking=768) -> dry-run sent
+synthetic pricing-question reply injected
+         -> Reply (gemini-2.5-flash, 0 thinking) -> pricing_question, positive
+         -> Closer (gemini-2.5-pro, thinking=1024) -> workshop_booking Rp 500,000
+         -> MockPaymentProvider -> http://localhost:5173/mock-pay/<ref>
+         -> follow-up BI email sent (dry-run)
+mock-pay webhook fires status=paid
+         -> payment_events.payment_status = paid
+         -> lead.status = paid, run.deals_closed += 1, total_revenue += 500_000
+         -> AfterCare (gemini-2.5-flash) -> "Pembayaran Workshop Anda Telah Berhasil!"
+```
+
+Total cost per closed deal in tokens: ~5,000 in / ~2,000 out across 8 agent calls ≈ **$0.10 per deal at Gemini 2.5 Flash + Pro pricing**. Well under the $1,150 GCP budget.
 
 ## What's been done
 
