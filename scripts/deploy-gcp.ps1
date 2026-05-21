@@ -90,7 +90,6 @@ try {
     --allow-unauthenticated `
     --memory 1Gi `
     --timeout 600 `
-    --min-instances 1 `
     --max-instances 2 `
     --port 8080 `
     --set-env-vars $envLine `
